@@ -9,6 +9,9 @@ const cron = require('node-cron');
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Developer Telegram ID (for feedback)
+const DEVELOPER_CHAT_ID = process.env.DEVELOPER_CHAT_ID || null;
+
 // Data storage functions
 const DATA_DIR = path.join(__dirname, 'data');
 const NUTRITION_FILE = path.join(DATA_DIR, 'nutrition.json');
@@ -395,6 +398,8 @@ bot.onText(/\/help/, (msg) => {
     '/goals - Set your daily nutrition goals\n' +
     '/summary - Get today\'s nutrition summary\n' +
     '/progress - Check your progress toward goals\n\n' +
+    '📬 *Feedback Commands:*\n' +
+    '/feedback - Send bug reports or suggestions to the developer\n\n' +
     'ℹ️ *Usage Tips:*\n' +
     '- Works in both direct messages and channel posts\n' +
     '- Goals are set in format: calories protein carbs fat\n' +
@@ -511,6 +516,63 @@ bot.onText(/\/progress/, async (msg) => {
   }
   
   await bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
+});
+
+// Feedback command
+bot.onText(/\/feedback/, (msg) => {
+  const chatId = msg.chat.id;
+  // Allow both channel and direct messages
+  const isAuthorized = chatId.toString() === process.env.CHAT_ID || msg.chat.type === 'private';
+  if (!isAuthorized) return;
+  
+  bot.sendMessage(
+    chatId,
+    '📬 *Send Feedback*\n\n' +
+    'Please type your bug report or suggestion and I\'ll forward it to my developer @JulianC97.\n\n' +
+    'You can also contact the developer directly on Telegram: @JulianC97\n\n' +
+    'Or type /cancel to cancel.'
+  , { parse_mode: 'Markdown' });
+  
+  // Set up listener for feedback input
+  const feedbackListener = bot.on('message', async (responseMsg) => {
+    if (responseMsg.chat.id !== chatId) return;
+    
+    if (responseMsg.text === '/cancel') {
+      bot.removeTextListener(feedbackListener);
+      bot.removeListener(feedbackListener);
+      bot.sendMessage(chatId, 'Feedback cancelled.');
+      return;
+    }
+    
+    // Forward feedback to developer
+    try {
+      const userInfo = `${responseMsg.from.first_name || ''} ${responseMsg.from.last_name || ''}`.trim() || 
+                      responseMsg.from.username || 
+                      `User ${responseMsg.from.id}`;
+      
+      const feedbackMessage = `📬 *New Feedback*\n\n` +
+        `From: ${userInfo} (${responseMsg.from.id})\n` +
+        `Date: ${new Date().toLocaleString()}\n\n` +
+        `📝 Message:\n${responseMsg.text}`;
+      
+      await bot.sendMessage(chatId, 'Thank you for your feedback! I\'ve forwarded it to my developer.');
+      
+      // Send feedback to developer if chat ID is configured
+      if (DEVELOPER_CHAT_ID) {
+        await bot.sendMessage(DEVELOPER_CHAT_ID, feedbackMessage, { parse_mode: 'Markdown' });
+      } else {
+        // Fallback: Log to console if no developer chat ID is set
+        console.log(`Feedback received from ${userInfo}: ${responseMsg.text}`);
+        console.log('Note: Set DEVELOPER_CHAT_ID in environment variables to receive feedback directly.');
+      }
+      
+      bot.removeTextListener(feedbackListener);
+      bot.removeListener(feedbackListener);
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+      bot.sendMessage(chatId, 'Sorry, there was an error sending your feedback. Please try again later.');
+    }
+  });
 });
 
 console.log('🤖 Food Analyst Bot is running...');
