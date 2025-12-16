@@ -16,6 +16,7 @@ const DEVELOPER_CHAT_ID = process.env.DEVELOPER_CHAT_ID || null;
 const DATA_DIR = path.join(__dirname, 'data');
 const NUTRITION_FILE = path.join(DATA_DIR, 'nutrition.json');
 const GOALS_FILE = path.join(DATA_DIR, 'goals.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 // Initialize data directory
 async function initializeDataDirectory() {
@@ -41,6 +42,12 @@ async function initializeDataDirectory() {
       carbs: 250,
       fat: 70
     }));
+  }
+  
+  try {
+    await fs.access(USERS_FILE);
+  } catch {
+    await fs.writeFile(USERS_FILE, JSON.stringify({}));
   }
 }
 
@@ -77,6 +84,21 @@ async function loadGoals() {
 // Save goals
 async function saveGoals(goals) {
   await fs.writeFile(GOALS_FILE, JSON.stringify(goals, null, 2));
+}
+
+// Save user information
+async function saveUserInfo(userId, userInfo) {
+  try {
+    const data = await fs.readFile(USERS_FILE, 'utf8');
+    const users = JSON.parse(data);
+    users[userId] = {
+      ...userInfo,
+      lastSeen: new Date().toISOString()
+    };
+    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+  } catch (error) {
+    console.error('Error saving user info:', error);
+  }
 }
 
 // Add food entry to nutrition data
@@ -404,6 +426,9 @@ bot.onText(/\/help/, (msg) => {
     '- Works in both direct messages and channel posts\n' +
     '- Goals are set in format: calories protein carbs fat\n' +
     '- Example: /goals 2000 150 250 70\n\n' +
+    '💬 *For Developers:*\n' +
+    '- User names in feedback are clickable links\n' +
+    '- Use /users to see recent user interactions\n\n' +
     'Powered by Claude AI 🤖'
   , { parse_mode: 'Markdown' });
 });
@@ -574,10 +599,20 @@ bot.onText(/\/feedback/, (msg) => {
                       responseMsg.from.username || 
                       `User ${responseMsg.from.id}`;
       
+      // Save user information for future reference
+      await saveUserInfo(responseMsg.from.id, {
+        firstName: responseMsg.from.first_name,
+        lastName: responseMsg.from.last_name,
+        username: responseMsg.from.username,
+        fullName: userInfo
+      });
+      
       const feedbackMessage = `📬 *New Feedback*\n\n` +
-        `From: ${userInfo} (${responseMsg.from.id})\n` +
+        `From: [${userInfo}](tg://user?id=${responseMsg.from.id}) (${responseMsg.from.id})\n` +
         `Date: ${new Date().toLocaleString()}\n\n` +
-        `📝 Message:\n${responseMsg.text}`;
+        `📝 Message:\n${responseMsg.text}\n\n` +
+        `🔄 *To Respond:*\n` +
+        `Click on the user's name above to open a chat with them directly.`;
       
       // Send feedback to developer if chat ID is configured
       if (DEVELOPER_CHAT_ID) {
@@ -604,6 +639,42 @@ bot.onText(/\/feedback/, (msg) => {
       // Ignore errors if listener is already removed
     }
   }, 5 * 60 * 1000); // 5 minutes
+});
+
+// View recent users command (developer only)
+bot.onText(/\/users/, async (msg) => {
+  // Only allow developer to use this command
+  if (msg.from.id.toString() !== DEVELOPER_CHAT_ID) {
+    return;
+  }
+  
+  try {
+    const data = await fs.readFile(USERS_FILE, 'utf8');
+    const users = JSON.parse(data);
+    
+    let response = '👥 *Recent Users*\n\n';
+    
+    // Convert to array and sort by last seen
+    const userList = Object.entries(users)
+      .map(([id, info]) => ({ id, ...info }))
+      .sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen))
+      .slice(0, 10); // Show only last 10 users
+    
+    if (userList.length === 0) {
+      response += 'No users found.';
+    } else {
+      userList.forEach(user => {
+        const name = user.fullName || user.username || `User ${user.id}`;
+        const date = new Date(user.lastSeen).toLocaleDateString();
+        response += `• [${name}](tg://user?id=${user.id}) (${user.id}) - ${date}\n`;
+      });
+    }
+    
+    await bot.sendMessage(DEVELOPER_CHAT_ID, response, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    await bot.sendMessage(DEVELOPER_CHAT_ID, '❌ Error fetching user list.');
+  }
 });
 
 console.log('🤖 Food Analyst Bot is running...');
