@@ -98,7 +98,8 @@ bot.on('photo', async (msg) => {
 📏 Serving: ${nutrition.serving_size}
 🎯 Confidence: ${nutrition.confidence}
 
-_Note: These are estimates based on visual analysis._`;
+_Note: These are estimates based on visual analysis._
+Powered by _Claude AI 🤖_`;
 
     await bot.sendMessage(chatId, response, { parse_mode: 'Markdown' });
     
