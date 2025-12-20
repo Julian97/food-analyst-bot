@@ -918,15 +918,14 @@ bot.onText(/\/help/, (msg) => {
   const isAuthorized = chatId.toString() === process.env.CHAT_ID || msg.chat.type === 'private';
   if (!isAuthorized) return;
   
-  bot.sendMessage(
-    chatId,
-    '🤖 *Food Analyst Bot Commands*\n\n' +
+  const helpMessage = '🤖 *Food Analyst Bot Commands*\n\n' +
     '📸 *Food Analysis:*\n' +
     'Simply send a photo of your food to get nutritional information\n\n' +
     '📋 *Tracking Commands:*\n' +
     '/goals - Set your daily nutrition goals\n' +
     '/summary - Get today\'s nutrition summary\n' +
-    '/progress - Check your progress toward goals\n\n' +
+    '/progress - Check your progress toward goals\n' +
+    '/erase - List and remove food entries\n\n' +
     '📬 *Feedback Commands:*\n' +
     '/feedback - Send bug reports or suggestions to the developer\n\n' +
     'ℹ️ *Usage Tips:*\n' +
@@ -936,8 +935,9 @@ bot.onText(/\/help/, (msg) => {
     '💬 *For Developers:*\n' +
     '- User names in feedback are clickable links\n' +
     '- Use /users to see recent user interactions\n\n' +
-    'Powered by Claude AI 🤖'
-  , { parse_mode: 'Markdown' });
+    'Powered by Claude AI 🤖';
+  
+  bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
 });
 
 // Set nutrition goals
