@@ -146,6 +146,9 @@ async function removeFoodEntryByIndex(chatId, index) {
   
   return removedEntry;
 }
+
+// Load goals
+async function loadGoals() {
   try {
     const data = await redisClient.get('goals');
     return data ? JSON.parse(data) : {
