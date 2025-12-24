@@ -662,10 +662,10 @@ async function getDailySummary(chatId) {
   summary += `- Fat: ${totals.fat}/${goals.fat}g\n\n`;
   
   // Progress indicators
-  const calorieProgress = Math.min(100, Math.round((totals.calories / goals.calories) * 100));
-  const proteinProgress = Math.min(100, Math.round((totals.protein / goals.protein) * 100));
-  const carbProgress = Math.min(100, Math.round((totals.carbs / goals.carbs) * 100));
-  const fatProgress = Math.min(100, Math.round((totals.fat / goals.fat) * 100));
+  const calorieProgress = Math.round((totals.calories / goals.calories) * 100);
+  const proteinProgress = Math.round((totals.protein / goals.protein) * 100);
+  const carbProgress = Math.round((totals.carbs / goals.carbs) * 100);
+  const fatProgress = Math.round((totals.fat / goals.fat) * 100);
   
   summary += `📈 *Progress:*\n`;
   summary += `- Calories: ${calorieProgress}%\n`;
@@ -1044,10 +1044,10 @@ bot.onText(/\/progress/, async (msg) => {
   const totals = await getTodayTotals(chatId);
   const goals = await loadGoals();
   
-  const calorieProgress = Math.min(100, Math.round((totals.calories / goals.calories) * 100));
-  const proteinProgress = Math.min(100, Math.round((totals.protein / goals.protein) * 100));
-  const carbProgress = Math.min(100, Math.round((totals.carbs / goals.carbs) * 100));
-  const fatProgress = Math.min(100, Math.round((totals.fat / goals.fat) * 100));
+  const calorieProgress = Math.round((totals.calories / goals.calories) * 100);
+  const proteinProgress = Math.round((totals.protein / goals.protein) * 100);
+  const carbProgress = Math.round((totals.carbs / goals.carbs) * 100);
+  const fatProgress = Math.round((totals.fat / goals.fat) * 100);
   
   let response = `📈 *Nutrition Progress*\n\n` +
     `- Calories: ${totals.calories}/${goals.calories} kcal (${calorieProgress}%)\n` +
